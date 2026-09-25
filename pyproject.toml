@@ -8,21 +8,20 @@ authors = [
 ]
 dependencies = [
     "fitsio",
-    "parse",
     "polars",
 ]
-description = "FITS file reader for Polars"
+description = "Euclid data product reader for Polars"
 dynamic = ["version"]
 license = "MIT"
 maintainers = [
     {name = "Nicolas Tessore", email = "n.tessore@ucl.ac.uk"}
 ]
-name = "polars-fits"
+name = "polars-euclid"
 readme = "README.md"
 requires-python = ">=3.10"
 
 [project.urls]
-repository = "https://github.com/ntessore/polars-fits"
+repository = "https://github.com/ntessore/polars-euclid"
 
 [tool.hatch]
 version.source = "vcs"
