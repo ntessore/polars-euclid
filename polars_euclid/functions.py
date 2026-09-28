@@ -10,11 +10,14 @@ import fitsio
 
 from polars.io.plugins import register_io_source
 
-from polars_euclid.metadata import Catalog, read_metadata, check_catalogs
+from polars_euclid.metadata import CatalogDescription, read_metadata, check_catalogs
+
+
+ALLOWED_JOIN = ["inner", "full"]
 
 
 @dataclass
-class CatalogColumns:
+class Catalog:
     """Describes a FITS catalogue with HDU and column names."""
     fits: str
     hdu: int
@@ -41,7 +44,7 @@ def expand_paths(paths: str | list[str]) -> list[str]:
 
 
 def read_schema(
-    catalogs: list[Catalog],
+    catalogs: list[CatalogDescription],
     *,
     join: str = "full",
 ) -> tuple[pl.Schema | None, dict[str, list[str]]]:
@@ -59,7 +62,7 @@ def read_schema(
 
 
 def read_catalogs(
-    catalogs: list[CatalogColumns],
+    catalogs: list[Catalog],
     *,
     with_columns: list[str] | str | None = None,
     join: str = "full",
@@ -77,11 +80,11 @@ def read_catalogs(
 
 
 def combined_catalogs_columns(
-    catalogs: dict[int, list[Catalog]],
+    catalogs: dict[int, list[CatalogDescription]],
     columns: dict[str, list[str]],
-) -> dict[int, list[CatalogColumns]]:
+) -> dict[int, list[Catalog]]:
     """Sort and update catalogues with column information."""
-    out: dict[int, list[CatalogColumns]] = {}
+    out: dict[int, list[Catalog]] = {}
     for tile_index, tile_catalogs in catalogs.items():
         updated_catalogs: list[Catalog] = []
         for catalog_name, catalog_columns in columns.items():
@@ -96,7 +99,7 @@ def combined_catalogs_columns(
                 raise ValueError(msg) from None
 
             updated_catalogs.append(
-                CatalogColumns(
+                Catalog(
                     fits=catalog.fits,
                     hdu=catalog.hdu,
                     columns=catalog_columns,
@@ -111,14 +114,24 @@ def scan_euclid(
     *,
     data_path: str = "data",
     join="full",
+    include_catalog: list[str] | None = None,
+    exclude_catalog: list[str] | None = None,
 ) -> pl.LazyFrame:
     """Read Euclid data products."""
+
+    if join not in ALLOWED_JOIN:
+        raise ValueError("join must be one of " + ", ".join(ALLOWED_JOIN))
 
     xml_paths = expand_paths(paths)
     if not xml_paths:
         raise FileNotFoundError(str(paths))
 
-    catalogs = read_metadata(xml_paths, data_path=data_path)
+    catalogs = read_metadata(
+        xml_paths,
+        data_path=data_path,
+        include=include_catalog,
+        exclude=exclude_catalog,
+    )
 
     check_catalogs(catalogs)
 

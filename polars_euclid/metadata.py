@@ -6,7 +6,7 @@ from functools import reduce
 
 
 @dataclass
-class Catalog:
+class CatalogDescription:
     """Data from CatalogDescription elements."""
     name: str
     type: str
@@ -19,10 +19,12 @@ def read_metadata(
     paths: list[str],
     *,
     data_path: str = "data",
-) -> dict[int, list[Catalog]]:
+    include: list[str] | None = None,
+    exclude: list[str] | None = None,
+) -> dict[int, list[CatalogDescription]]:
     """Collect all data files from the given set of XML products."""
 
-    catalogs: dict[int, list[Catalog]] = {}
+    catalogs: dict[int, list[CatalogDescription]] = {}
 
     for path in paths:
         root = ET.parse(path).getroot()
@@ -41,6 +43,12 @@ def read_metadata(
 
         for catalog_description in root.findall("./Data/CatalogDescription"):
             catalog_name = catalog_description.find("CatalogName").text
+
+            if include is not None and catalog_name not in include:
+                continue
+            if exclude is not None and catalog_name in exclude:
+                continue
+
             catalog_type = catalog_description.find("CatalogType").text
             catalog_origin = catalog_description.find("CatalogOrigin").text
             catalog_path = catalog_description.find("PathToCatalogFile").text
@@ -50,7 +58,7 @@ def read_metadata(
             catalog_fits = os.path.join(data_path, catalog_fits)
 
             catalogs[tile_index].append(
-                Catalog(
+                CatalogDescription(
                     name=catalog_name,
                     type=catalog_type,
                     origin=catalog_origin,
@@ -62,12 +70,13 @@ def read_metadata(
     return catalogs
 
 
-def check_catalogs(catalogs: dict[int, list[Catalog]]) -> None:
+def check_catalogs(catalogs: dict[int, list[CatalogDescription]]) -> None:
     """Ensure that a set of catalogues is consistent."""
     catalog_names = [{catalog.name for catalog in tile} for tile in catalogs.values()]
     combined_names = reduce(lambda x, y: x | y, catalog_names)
 
-    if any(names != combined_names for names in catalog_names):
-        raise ValueError("inconsistent catalogues")
+    missing = reduce(lambda x, y: x | y, (combined_names - names for names in catalog_names))
+    if missing:
+        raise ValueError("inconsistent catalogues: " + ", ".join(sorted(missing)))
 
     # TODO: check consistency of catalogue type and origin?
