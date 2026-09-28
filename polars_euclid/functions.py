@@ -43,6 +43,17 @@ def expand_paths(paths: str | list[str]) -> list[str]:
     return out
 
 
+def join_catalogs(
+    left: pl.DataFrame | None,
+    right: pl.DataFrame,
+    join: str,
+) -> pl.DataFrame:
+    """Join two catalogues on OBJECT_ID."""
+    if left is None:
+        return right
+    return left.join(right, on="OBJECT_ID", how=join, coalesce=True)
+
+
 def read_schema(
     catalogs: list[CatalogDescription],
     *,
@@ -55,8 +66,11 @@ def read_schema(
     df: pl.DataFrame | None = None
     columns: dict[str, list[str]] = {}
     for catalog in catalogs:
-        tmp = pl.from_numpy(fitsio.read(catalog.fits, ext=catalog.hdu, rows=[]))
-        df = df.join(tmp, on="OBJECT_ID", how=join) if df is not None else tmp
+        df = join_catalogs(
+            df,
+            pl.from_numpy(fitsio.read(catalog.fits, ext=catalog.hdu, rows=[])),
+            join,
+        )
         columns[catalog.name] = df.columns
     return df.schema if df is not None else None, columns
 
@@ -74,8 +88,11 @@ def read_catalogs(
             columns = None
         else:
             columns = [column for column in catalog.columns if column in with_columns]
-        tmp = pl.from_numpy(fitsio.read(catalog.fits, ext=catalog.hdu, columns=columns))
-        df = df.join(tmp, on="OBJECT_ID", how=join) if df is not None else tmp
+        df = join_catalogs(
+            df,
+            pl.from_numpy(fitsio.read(catalog.fits, ext=catalog.hdu, columns=columns)),
+            join,
+        )
     return df
 
 
