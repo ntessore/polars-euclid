@@ -30,7 +30,10 @@ def expand_paths(paths: str | list[str]) -> list[str]:
         paths = [paths]
     out = []
     for path in paths:
-        for expanded_path in glob.iglob(path):
+        expanded_paths = glob.glob(path)
+        if not expanded_paths:
+            raise FileNotFoundError(path)
+        for expanded_path in expanded_paths:
             if os.path.isdir(expanded_path):
                 out.extend(
                     glob.iglob(
