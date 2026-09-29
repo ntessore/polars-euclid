@@ -136,6 +136,7 @@ def scan_euclid(
     join="full",
     include_catalog: list[str] | None = None,
     exclude_catalog: list[str] | None = None,
+    tiles: list[int] | None = None,
 ) -> pl.LazyFrame:
     """Read Euclid data products."""
 
@@ -152,6 +153,14 @@ def scan_euclid(
         include=include_catalog,
         exclude=exclude_catalog,
     )
+
+    if tiles is not None:
+        if not tiles:
+            raise ValueError("empty tile set")
+        try:
+            catalogs = {tile: catalogs[tile] for tile in tiles}
+        except KeyError as exc:
+            raise ValueError(f"requested tile not found: {exc!s}") from None
 
     check_catalogs(catalogs)
 
