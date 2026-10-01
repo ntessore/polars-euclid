@@ -69,12 +69,9 @@ def read_schema(
     df: pl.DataFrame | None = None
     columns: dict[str, list[str]] = {}
     for catalog in catalogs:
-        df = join_catalogs(
-            df,
-            pl.from_numpy(fitsio.read(catalog.fits, ext=catalog.hdu, rows=[])),
-            join,
-        )
-        columns[catalog.name] = df.columns
+        tmp = pl.from_numpy(fitsio.read(catalog.fits, ext=catalog.hdu, rows=[]))
+        df = join_catalogs(df, tmp, join)
+        columns[catalog.name] = tmp.columns
     return df.schema if df is not None else None, columns
 
 
