@@ -134,6 +134,7 @@ def scan_euclid(
     include_catalog: list[str] | None = None,
     exclude_catalog: list[str] | None = None,
     tiles: list[int] | None = None,
+    cast: bool = False,
 ) -> pl.LazyFrame:
     """Read Euclid data products."""
 
@@ -187,6 +188,9 @@ def scan_euclid(
 
             if predicate is not None:
                 df = df.filter(predicate)
+
+            if cast:
+                df = df.cast({name: schema[name] for name in df.columns})
 
             yield df
 
